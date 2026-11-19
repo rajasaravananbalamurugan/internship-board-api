@@ -238,15 +238,33 @@
     countEl.textContent = '';
 
     try {
-      const res = await fetch('./internships.json');
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const data = await res.json();
+      let items = null;
 
-      if (!data.internships || !Array.isArray(data.internships)) {
-        throw new Error('Unexpected data format.');
+      // Try fetching from the backend REST API first
+      try {
+        const apiRes = await fetch('/api/internships?limit=100');
+        if (apiRes.ok) {
+          const apiJson = await apiRes.json();
+          if (apiJson && apiJson.status === 'success' && Array.isArray(apiJson.data)) {
+            items = apiJson.data;
+          }
+        }
+      } catch (apiErr) {
+        // Fallback to static JSON if backend API is not running
       }
 
-      allInternships = data.internships;
+      // If backend API did not provide data, fallback to internships.json
+      if (!items) {
+        const res = await fetch('./internships.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const data = await res.json();
+        if (!data.internships || !Array.isArray(data.internships)) {
+          throw new Error('Unexpected data format.');
+        }
+        items = data.internships;
+      }
+
+      allInternships = items;
       renderCards(allInternships);
     } catch (err) {
       showState('error');
